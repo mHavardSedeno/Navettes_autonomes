@@ -1,5 +1,6 @@
 using JuMP
 using GLPK
+include("distance.jl")
 
 
 # Setting an ip model of SPP
@@ -11,6 +12,11 @@ function setFLP(solverSelected, p)
   @variable(model, supp[1:3], Bin) #3 variables binaires pour la creation des arrets a Carquefou
   @variable(model, zone[1:30], Int)
 
+  #Matrice des distances entre les stations supplémentaires (après Carquefou Gare)
+  D = [0 650 1250 2000;
+       650 0 600 1350;
+       1250 600 0 750;
+       2000 1350 750 0]
   #Matrice des 30 densités de population touchées par chaque station
   desserte = [0 600 0 0 0 0 0 0 0 0 0 0;    #Ecusson
               0 500 0 0 0 0 0 0 0 0 0 0;    #Tazieff
@@ -47,8 +53,8 @@ function setFLP(solverSelected, p)
 #Minimiser les couts
 #sum(stop[i] * 1.9 for i in 1:12) + sum(supp[k] * D[1,k] * 5.9 for k in 1:3)
 #Maximiser les dessertes
-# @objective(model, Max, sum(zone[i] for i in 1:30))
-@objective(model, Min, sum(stop[i] * 1.9 for i in 1:12) + sum(supp[k] * D[1,k] * 5.9 for k in 1:3)-sum(zone[i] for i in 1:30))
+@objective(model, Max, sum(zone[i] for i in 1:30))
+# @objective(model, Min, sum(stop[i] * 190 for i in 1:12) + sum(supp[k] * D[1,k] * 590 for k in 1:3) - sum(zone[i] for i in 1:30))
 
   #On veut forcément ouvrir la station de Landeau
   @constraint(model, cstr_Landeau, stop[1] == 1)
@@ -59,7 +65,7 @@ function setFLP(solverSelected, p)
   #On veut ouvrir au moins un des 3 arrêts après Carquefou Gare
   @constraint(model, cstr3, sum(stop[i] for i in 10:12) >=1 )
   #Le nombre de stations ouvertes doit être supérieur à p
-  @constraint(model, nb_arret, sum(stop[i] for i in 1:12) <= p)
+   @constraint(model, nb_arret, sum(stop[i] for i in 1:12) <= p)
   #Zones desservies par une station ouverte
   @constraint(model, desservie1, zone[1] <= sum(desserte[1,j]*stop[j] for j in 1:12))
   @constraint(model, desservie2, zone[2] <= sum(desserte[2,j]*stop[j] for j in 1:12))
@@ -106,7 +112,7 @@ end
 
 # Appel pour optimisation
 solverSelected = GLPK.Optimizer
-model, model_x, model_zone = setFLP(solverSelected, 7)
+model, model_x, model_zone = setFLP(solverSelected, 8)
 println("Solving..."); optimize!(model)
 
 # Afficher les résultats
