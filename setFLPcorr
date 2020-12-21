@@ -1,0 +1,49 @@
+using JuMP
+using GLPK
+include("distance.jl")
+
+
+# Setting an ip model of SPP
+function setFLP(solverSelected, p)
+
+  model = Model(with_optimizer(solverSelected))
+
+  @variable(model, stop[1:12], Bin) #12 arrets -> 12 variables binaires si l'arret est choisi ou non
+  @variable(model, supp[1:3], Bin) #3 variables binaires pour la creation des arrets a Carquefou
+  @variable(model, zone[1:30], Int)
+
+
+#Minimiser les couts
+#sum(stop[i] * 1.9 for i in 1:12) + sum(supp[k] * D[1,k] * 5.9 for k in 1:3)
+#Maximiser les dessertes
+@objective(model, Max, sum(zone[i] for i in 1:30))
+# @objective(model, Min, sum(stop[i] * 190 for i in 1:12) + sum(supp[k] * D[1,k] * 590 for k in 1:3) - sum(zone[i] for i in 1:30))
+
+  #On veut forcément ouvrir la station de Landeau
+  @constraint(model, cstr_Landeau, stop[1] == 1)
+  #On veut forcément ouvrir la station de 2e
+  @constraint(model, cstr_bidon, stop[2] == 1)
+  #On veut forcément ouvrir la station de Carquefou Gare
+  @constraint(model, cstr_Gare, stop[9] == 1)
+  #On veut ouvrir au moins un des 3 arrêts après Carquefou Gare
+  @constraint(model, cstr3, sum(stop[i] for i in 10:12) >=1 )
+  #Le nombre de stations ouvertes doit être supérieur à p
+   @constraint(model, nb_arret, sum(stop[i] for i in 1:12) <= p)
+  #Zones desservies par une station ouverte
+  @constraint(model, desservie1, zone[1] <= sum(desserte[1,j]*stop[j] for j in 1:12))
+
+  # println("model : ", model)
+  return model, stop, zone
+end
+
+
+
+# Appel pour optimisation
+solverSelected = GLPK.Optimizer
+model, model_x, model_zone = setFLP(solverSelected, 8)
+println("Solving..."); optimize!(model)
+
+# Afficher les résultats
+println("z  = ", objective_value(model))
+print("x  = "); println(value.(model_x))
+print("zones : "); println(value.(model_zone))
