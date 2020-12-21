@@ -58,14 +58,13 @@ function setFLP(solverSelected, p)
 
   #On veut forcément ouvrir la station de Landeau
   @constraint(model, cstr_Landeau, stop[1] == 1)
-  #On veut forcément ouvrir la station de 2e
-  @constraint(model, cstr_bidon, stop[2] == 1)
+
   #On veut forcément ouvrir la station de Carquefou Gare
   @constraint(model, cstr_Gare, stop[9] == 1)
-  #On veut ouvrir au moins un des 3 arrêts après Carquefou Gare
-  @constraint(model, cstr3, sum(stop[i] for i in 10:12) >=1 )
+
   #Le nombre de stations ouvertes doit être supérieur à p
    @constraint(model, nb_arret, sum(stop[i] for i in 1:12) <= p)
+
   #Zones desservies par une station ouverte
   @constraint(model, desservie1, zone[1] <= sum(desserte[1,j]*stop[j] for j in 1:12))
   @constraint(model, desservie2, zone[2] <= sum(desserte[2,j]*stop[j] for j in 1:12))
@@ -98,24 +97,31 @@ function setFLP(solverSelected, p)
   @constraint(model, desservie29, zone[29] == sum(desserte[29,j]*stop[j] for j in 1:12))
   @constraint(model, desservie30, zone[30] == sum(desserte[30,j]*stop[j] for j in 1:12))
 
-  #Contraintes pour calcul des couts
-  # @constraint(model, arret_sup1, supp[3] == stop[12])
-  # @constraint(model, arret_sup2, supp[2] == stop[11] - stop[12])
-  # @constraint(model, arret_sup3, supp[1] <= (stop[10] - stop[11]))
-  # @constraint(model, arret_sup4, supp[1] <= (stop[10] - stop[12]))
-
-  # println("model : ", model)
   return model, stop, zone
 end
 
 
-
-# Appel pour optimisation
-solverSelected = GLPK.Optimizer
-model, model_x, model_zone = setFLP(solverSelected, 8)
-println("Solving..."); optimize!(model)
-
-# Afficher les résultats
-println("z  = ", objective_value(model))
-print("x  = "); println(value.(model_x))
-print("zones : "); println(value.(model_zone))
+# Calcul du cout
+# cost = 0
+#
+# for s in 1:12
+#   if value.(model_x[s]) == 1.0
+#     global cost += 1.9
+#   end
+# end
+#
+# if value.(model_x[12]) == 1.0
+#   dist = distance(47.295268, -1.485513, 47.304760, -1.502969)/1000
+#   println("distance 9-12 = ", dist)
+#   global cost += 5.9 * dist
+# elseif value.(model_x[11]) == 1.0
+#   dist = distance(47.295268, -1.485513, 47.299027, -1.499150)/1000
+#   println("distance 9-11 = ", dist)
+#   global cost += 5.9 * dist
+# elseif value.(model_x[10]) == 1.0
+#   dist = distance(47.295268, -1.485513, 47.297251, -1.492025)/1000
+#   println("distance 9-10 = ", dist)
+#   global cost += 5.9 * dist
+# end
+#
+# print("coût de la solution = ", cost)
